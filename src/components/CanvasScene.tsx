@@ -1,14 +1,10 @@
 import { useEffect, useRef } from "react";
-import {
-  RasterRenderer,
-  type LineAlg,
-  type RGBA,
-} from "../lib/raster/RasterRenderer";
+import { RasterRenderer, type LineAlg } from "../lib/raster/RasterRenderer";
+import { Line, Oval, Rect, type Shape } from "../lib/shapes";
 
 type CanvasSceneProps = {
   lineAlg: LineAlg;
 };
-
 
 function CanvasScene({ lineAlg }: CanvasSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -53,70 +49,57 @@ function CanvasScene({ lineAlg }: CanvasSceneProps) {
         const w = r.width;
         const h = r.height;
 
-        const red: RGBA = { r: 255, g: 0, b: 0, a: 255 };
-        const black: RGBA = { r: 0, g: 0, b: 0, a: 255 };
-        const blue: RGBA = { r: 40, g: 110, b: 255, a: 255 };
-        const green: RGBA = { r: 30, g: 190, b: 110, a: 255 };
-        const orange: RGBA = { r: 255, g: 140, b: 0, a: 255 };
-        const transparentRed: RGBA = { r: 255, g: 0, b: 0, a: 130 };
+        const shapes: Shape[] = [
+          new Rect(w * 0.22, h * 0.24, w * 0.25, h * 0.18, {
+            fillStyle: "#2563EB",
+            fillOpacity: 0.85,
+            strokeStyle: "#0F172A",
+            strokeWidth: 4 * r.dpr,
+            strokeOpacity: 1,
+          }),
 
-        // 1. Закрашенный многоугольник
-        const polygon = [
-          { x: w * 0.12, y: h * 0.15 },
-          { x: w * 0.45, y: h * 0.12 },
-          { x: w * 0.38, y: h * 0.42 },
-          { x: w * 0.16, y: h * 0.38 },
+          new Rect(w * 0.42, h * 0.42, w * 0.22, h * 0.16, {
+            fillStyle: "#22C55E",
+            fillOpacity: 0.8,
+            strokeStyle: "#052E16",
+            strokeWidth: 4 * r.dpr,
+            strokeOpacity: 1,
+            transform: {
+              rotation: Math.PI / 8,
+            },
+          }),
+
+          new Oval(w * 0.72, h * 0.28, 90 * r.dpr, 55 * r.dpr, {
+            fillStyle: "#F97316",
+            fillOpacity: 0.9,
+            strokeStyle: "#111827",
+            strokeWidth: 4 * r.dpr,
+            strokeOpacity: 1,
+          }),
+
+          new Oval(w * 0.30, h * 0.70, 95 * r.dpr, 70 * r.dpr, {
+            fillStyle: "#EF4444",
+            fillOpacity: 0.5,
+            strokeStyle: "#7F1D1D",
+            strokeWidth: 4 * r.dpr,
+            strokeOpacity: 1,
+          }),
+
+          new Line(w * 0.52, h * 0.66, w * 0.88, h * 0.82, {
+            strokeStyle: "#111827",
+            strokeWidth: 18 * r.dpr,
+            strokeOpacity: 1,
+          }),
+
+          new Line(w * 0.52, h * 0.20, w * 0.92, h * 0.54, {
+            strokeStyle: "#DC2626",
+            strokeWidth: 1,
+            strokeOpacity: 1,
+          }),
         ];
 
-        r.fillPolygon(polygon, green);
-        r.strokePolygon(polygon, black, 4 * r.dpr);
-
-        // 2. Окружность
-        r.fillCircle(w * 0.72, h * 0.28, 70 * r.dpr, orange);
-        r.strokeLine(
-          w * 0.72 - 90 * r.dpr,
-          h * 0.28,
-          w * 0.72 + 90 * r.dpr,
-          h * 0.28,
-          black,
-          3 * r.dpr
-        );
-
-        // 3. Проверка прозрачности: синий квадрат + полупрозрачный красный круг
-        const square = [
-          { x: w * 0.12, y: h * 0.58 },
-          { x: w * 0.34, y: h * 0.58 },
-          { x: w * 0.34, y: h * 0.82 },
-          { x: w * 0.12, y: h * 0.82 },
-        ];
-
-        r.fillPolygon(square, blue);
-        r.fillCircle(w * 0.32, h * 0.70, 80 * r.dpr, transparentRed);
-
-        // 4. Толстая ломаная линия
-        const polyline = [
-          { x: w * 0.52, y: h * 0.62 },
-          { x: w * 0.62, y: h * 0.78 },
-          { x: w * 0.75, y: h * 0.60 },
-          { x: w * 0.88, y: h * 0.82 },
-        ];
-
-        for (let i = 0; i < polyline.length - 1; i++) {
-          const a = polyline[i];
-          const b = polyline[i + 1];
-
-          r.strokeLine(a.x, a.y, b.x, b.y, black, 18 * r.dpr);
-        }
-
-        // 5. Линия для сравнения Брезенхема и Ву
-        for (let offset = -2; offset <= 2; offset++) {
-        r.drawLine(
-            w * 0.52,
-            h * 0.45 + offset * r.dpr,
-            w * 0.90,
-            h * 0.53 + offset * r.dpr,
-            red
-        );
+        for (const shape of shapes) {
+          shape.drawRaster(r);
         }
 
         r.commit();
