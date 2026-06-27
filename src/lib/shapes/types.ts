@@ -1,4 +1,11 @@
-export type ShapeKind = "rect" | "line" | "oval";
+export type ShapeKind =
+  | "rect"
+  | "line"
+  | "oval"
+  | "triangle"
+  | "quadraticBezier"
+  | "cubicBezier"
+  | "pathBezier";
 
 export type Transform = {
   x: number;
@@ -39,5 +46,7 @@ export type ShapeJSON = {
   strokeWidth: number;
   strokeOpacity: number;
 
-  geometry: Record<string, number>;
+  geometry: Record<string, unknown>;
 };
+
+export type PathBezierMode = "polyline" | "bezier" | "catmull";

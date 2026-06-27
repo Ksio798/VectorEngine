@@ -3,3 +3,7 @@ export * from "./Shape";
 export * from "./Rect";
 export * from "./Line";
 export * from "./Oval";
+export * from "./Triangle";
+export * from "./QuadraticBezier";
+export * from "./CubicBezier";
+export * from "./PathBezier";
