@@ -12,10 +12,12 @@ import {
   PathBezier,
   QuadraticBezier,
   Rect,
+  shapeFromJSON,
   Triangle,
   type Bounds,
   type Point2D,
   type Shape,
+  type ShapeJSON,
   type Transform,
 } from "../lib/shapes";
 
@@ -31,6 +33,10 @@ export type SceneCreationStyle = {
   strokeStyle: string;
   strokeOpacity: number;
   strokeWidth: number;
+};
+
+export type SceneSnapshot = {
+  shapes: ShapeJSON[];
 };
 
 export type ScenePanelState = {
@@ -106,8 +112,10 @@ type CanvasSceneProps = {
   lineAlg: LineAlg;
   activeTool: EditorTool;
   creationStyle: SceneCreationStyle;
+  initialShapes: ShapeJSON[] | null;
   onToolChange: (tool: EditorTool) => void;
   onSceneStateChange: (state: ScenePanelState) => void;
+  onSceneSnapshotChange: (snapshot: SceneSnapshot) => void;
   sceneCommand: SceneCommand | null;
   onCommandHandled: () => void;
 };
@@ -424,13 +432,15 @@ function buildShapeFromDrag(
 }
 
 function CanvasScene({
-  lineAlg,
-  activeTool,
-  creationStyle,
-  onToolChange,
-  onSceneStateChange,
-  sceneCommand,
-  onCommandHandled,
+    lineAlg,
+    activeTool,
+    creationStyle,
+    initialShapes,
+    onToolChange,
+    onSceneStateChange,
+    onSceneSnapshotChange,
+    sceneCommand,
+    onCommandHandled,
 }: CanvasSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rendererRef = useRef<RasterRenderer | null>(null);
@@ -481,9 +491,16 @@ function CanvasScene({
     onSceneStateChange(getPanelState());
   };
 
+  const emitSnapshot = () => {
+    onSceneSnapshotChange({
+      shapes: shapesRef.current.map((shape) => shape.toJSON()),
+    });
+  };
+
   const redrawUI = () => {
     forceRender((v) => v + 1);
     emitPanelState();
+    emitSnapshot();
   };
 
   const setSelectedId = (id: string | null) => {
@@ -1048,6 +1065,27 @@ function CanvasScene({
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
+
+  useEffect(() => {
+    if (!initialShapes) {
+      return;
+    }
+
+    const restoredShapes = initialShapes
+      .map((shapeData) => shapeFromJSON(shapeData))
+      .filter((shape): shape is Shape => shape !== null);
+
+    shapesRef.current = restoredShapes;
+
+    if (
+      selectedIdRef.current &&
+      !restoredShapes.some((shape) => shape.id === selectedIdRef.current)
+    ) {
+      setSelectedId(null);
+    }
+
+    redrawUI();
+  }, [initialShapes]);
 
   useEffect(() => {
     if (rendererRef.current) {

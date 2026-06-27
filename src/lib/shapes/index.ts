@@ -7,3 +7,4 @@ export * from "./Triangle";
 export * from "./QuadraticBezier";
 export * from "./CubicBezier";
 export * from "./PathBezier";
+export * from "./shapeFactory";

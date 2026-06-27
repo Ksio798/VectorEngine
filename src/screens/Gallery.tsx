@@ -1,35 +1,57 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-
-type Project = {
-  id: string;
-  name: string;
-  date: string;
-};
+import {
+  createEmptyProject,
+  loadProjectIndex,
+  saveProject,
+  type ProjectIndexItem,
+} from "../lib/projectStorage";
 
 function Gallery() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectIndexItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addProject = () => {
-    const newProject: Project = {
-      id: String(Date.now()),
-      name: `Проект ${projects.length + 1}`,
-      date: new Date().toLocaleDateString(),
-    };
+  const refreshProjects = async () => {
+    setLoading(true);
 
-    setProjects([...projects, newProject]);
+    try {
+      const index = await loadProjectIndex();
+      setProjects(index);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const addProject = async () => {
+    const id = String(Date.now());
+    const project = createEmptyProject(id, `Проект ${projects.length + 1}`);
+
+    const savedProject = await saveProject(project);
+
+    await refreshProjects();
+
+    return savedProject;
+  };
+
+  useEffect(() => {
+    refreshProjects();
+  }, []);
+
   return (
-    <motion.main className="p-8" initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.25 }}>
+    <motion.main
+      className="min-h-screen bg-slate-950 p-8 text-white"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+    >
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Галерея проектов</h1>
-          <p className="text-slate-400">Создавайте и открывайте проекты VectorEngine</p>
+          <p className="text-slate-400">
+            Создавайте и открывайте проекты VectorEngine
+          </p>
         </div>
 
         <button
@@ -40,7 +62,11 @@ function Gallery() {
         </button>
       </div>
 
-      {projects.length === 0 ? (
+      {loading ? (
+        <div className="rounded-lg border border-slate-800 bg-slate-900 p-8 text-center text-slate-400">
+          Загрузка проектов...
+        </div>
+      ) : projects.length === 0 ? (
         <div className="rounded-lg border border-slate-800 bg-slate-900 p-8 text-center text-slate-400">
           Проектов пока нет. Нажмите «Создать проект».
         </div>
@@ -53,8 +79,13 @@ function Gallery() {
                 className="rounded-lg border border-slate-800 bg-slate-900 p-6 transition hover:bg-slate-800"
               >
                 <h2 className="text-xl font-semibold">{project.name}</h2>
+
                 <p className="mt-2 text-sm text-slate-400">
-                  Дата создания: {project.date}
+                  Создан: {new Date(project.createdAt).toLocaleString()}
+                </p>
+
+                <p className="mt-1 text-sm text-slate-400">
+                  Изменён: {new Date(project.updatedAt).toLocaleString()}
                 </p>
               </motion.article>
             </Link>

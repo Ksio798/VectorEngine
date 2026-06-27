@@ -1,4 +1,4 @@
-import { useState, type ElementType } from "react";
+import { useEffect, useState, type ElementType } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -15,7 +15,14 @@ import CanvasScene, {
   type SceneCommand,
   type SceneCreationStyle,
   type ScenePanelState,
+  type SceneSnapshot,
 } from "../components/CanvasScene";
+import {
+  createEmptyProject,
+  loadProject,
+  saveProject,
+  type VectorProject,
+} from "../lib/projectStorage";
 import type { LineAlg } from "../lib/raster/RasterRenderer";
 import type { EditorTool } from "../lib/editor/toolTypes";
 
@@ -114,10 +121,45 @@ function Editor() {
   const [panelState, setPanelState] =
     useState<ScenePanelState>(emptyPanelState);
 
+  const [currentProject, setCurrentProject] = useState<VectorProject | null>(null);
+  const [initialShapes, setInitialShapes] = useState<VectorProject["shapes"] | null>(null);
+  const [sceneSnapshot, setSceneSnapshot] = useState<SceneSnapshot>({shapes: [],});
+  const [saveStatus, setSaveStatus] = useState<string>("");
+
   const [sceneCommand, setSceneCommand] = useState<SceneCommand | null>(null);
   const [, setCommandId] = useState(0);
 
   const projectId = id ?? "new";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCurrentProject() {
+      const loadedProject = await loadProject(projectId);
+
+      if (cancelled) {
+        return;
+      }
+
+      if (loadedProject) {
+        setCurrentProject(loadedProject);
+        setLineAlg(loadedProject.lineAlg);
+        setCreationStyle(loadedProject.creationStyle);
+        setInitialShapes(loadedProject.shapes);
+      } else {
+        const emptyProject = createEmptyProject(projectId);
+
+        setCurrentProject(emptyProject);
+        setInitialShapes([]);
+      }
+    }
+
+    loadCurrentProject();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   const sendSceneCommand = (command: SceneCommandInput) => {
     setCommandId((prev) => {
@@ -130,6 +172,33 @@ function Editor() {
 
       return nextId;
     });
+  };
+
+  const handleSaveProject = async () => {
+    if (!currentProject) {
+      return;
+    }
+
+    const projectToSave: VectorProject = {
+      ...currentProject,
+      lineAlg,
+      creationStyle,
+      shapes: sceneSnapshot.shapes,
+    };
+
+    try {
+      const saved = await saveProject(projectToSave);
+
+      setCurrentProject(saved);
+      setSaveStatus("Проект сохранён");
+
+      setTimeout(() => {
+        setSaveStatus("");
+      }, 2000);
+    } catch (error) {
+      console.error(error);
+      setSaveStatus("Ошибка сохранения");
+    }
   };
 
   const selectedExists = Boolean(panelState.selectedId);
@@ -272,10 +341,14 @@ const updateFillOpacity = (value: number) => {
             Ву
           </button>
 
-          <button className="flex items-center gap-2 rounded bg-blue-600 px-3 py-2 transition hover:bg-blue-500">
+          <button onClick={handleSaveProject} className="flex items-center gap-2 rounded bg-blue-600 px-3 py-2 transition hover:bg-blue-500">
             <Save size={18} />
             Сохранить
           </button>
+
+          {saveStatus && (
+          <span className="text-sm text-slate-300">{saveStatus}</span>
+          )}
         </div>
       </header>
 
@@ -320,8 +393,10 @@ const updateFillOpacity = (value: number) => {
               lineAlg={lineAlg}
               activeTool={activeTool}
               creationStyle={creationStyle}
+              initialShapes={initialShapes}
               onToolChange={setActiveTool}
               onSceneStateChange={setPanelState}
+              onSceneSnapshotChange={setSceneSnapshot}
               sceneCommand={sceneCommand}
               onCommandHandled={() => setSceneCommand(null)}
             />
